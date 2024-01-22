@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import "dart:math";
 
 class MapScreen extends StatefulWidget {
   const MapScreen({
@@ -34,6 +35,9 @@ class _MapScreenState extends State<MapScreen> {
     accuracy: LocationAccuracy.high, //正確性:highはAndroid(0-100m),iOS(10m)
     distanceFilter: 0,
   );
+
+  // 目的地の緯度・経度
+  late LatLng target;
 
   @override
   void dispose() {
@@ -67,6 +71,7 @@ class _MapScreenState extends State<MapScreen> {
                   latLang.longitude,
                 ),
               ));
+              target = latLang;
             });
           },
           myLocationButtonEnabled: false,
@@ -75,8 +80,8 @@ class _MapScreenState extends State<MapScreen> {
       ),
       Center(
         child: OutlinedButton(
-          onPressed: () {}, //_showNotification,
-          child: Text('通知を表示'),
+          onPressed: _showNotification, //_showNotification,
+          child: Text('目的地までの距離を表示'),
         ),
       ),
     ]));
@@ -87,11 +92,13 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
 
     _initializePlatformsSpecifics();
+
+    target = LatLng(0,0);
   }
 
   void _initializePlatformsSpecifics() {
     var initializationSettingsAndroid =
-        AndroidInitializationSettings('app_icon');
+        AndroidInitializationSettings('mipmap/ic_launcher');
 
     var initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
@@ -119,6 +126,17 @@ class _MapScreenState extends State<MapScreen> {
             position.longitude,
           ),
         ));
+        print("------------------------------------------");
+        print(position);
+        print(distanceBetween(
+          // 現在地
+          position.latitude,
+          position.longitude,
+          // 目的地
+          target.latitude,
+          target.longitude,
+        ));
+        print("------------------------------------------");
       });
       // 現在地にカメラを移動
       await mapController.animateCamera(
@@ -193,4 +211,24 @@ class _MapScreenState extends State<MapScreen> {
       );
     }
   }
+
+  double distanceBetween(
+      double latitude1,
+      double longitude1,
+      double latitude2,
+      double longitude2,
+      ) {
+    final toRadians = (double degree) => degree * pi / 180;
+    final double r = 6378137.0; // 地球の半径
+    final double f1 = toRadians(latitude1);
+    final double f2 = toRadians(latitude2);
+    final double l1 = toRadians(longitude1);
+    final double l2 = toRadians(longitude2);
+    final num a = pow(sin((f2 - f1) / 2), 2);
+    final double b = cos(f1) * cos(f2) * pow(sin((l2 - l1) / 2), 2);
+    final double d = 2 * r * asin(sqrt(a + b));
+    return d;
+  }
+  // 現在地から目的地までの距離が50メートル以内に近づいたら通知を出す。
+
 }
