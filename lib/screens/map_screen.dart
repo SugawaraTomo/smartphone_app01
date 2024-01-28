@@ -26,7 +26,7 @@ class _MapScreenState extends State<MapScreen> {
   Set<Marker> markers = {};
 
   final CameraPosition initialCameraPosition = CameraPosition(
-    target: LatLng(35.681236, 139.767125),
+    target: LatLng(35.681236, 139.767125),// 東京駅
     zoom: 16.0,
   );
 
@@ -40,7 +40,7 @@ class _MapScreenState extends State<MapScreen> {
   late LatLng target;
 
   @override
-  void dispose() {
+  void dispose() { //終了時に実行
     mapController.dispose();
     // Streamを閉じる
     positionStream.cancel();
@@ -48,7 +48,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) { //画面表示
     return Scaffold(
         body: Column(children: <Widget>[
       Container(
@@ -88,7 +88,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   @override
-  void initState() {
+  void initState() { //初期化処理
     super.initState();
 
     _initializePlatformsSpecifics();
@@ -96,20 +96,17 @@ class _MapScreenState extends State<MapScreen> {
     target = LatLng(0,0);
   }
 
-  void _initializePlatformsSpecifics() {
+  void _initializePlatformsSpecifics() { //通知の初期化
     var initializationSettingsAndroid =
-        AndroidInitializationSettings('mipmap/ic_launcher');
+        AndroidInitializationSettings("app_icon");
 
     var initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
 
-    flutterLocalNotificationsPlugin.initialize(initializationSettings,
-        onDidReceiveBackgroundNotificationResponse: (NotificationResponse res) {
-      debugPrint('payload:${res.payload}');
-    });
+    flutterLocalNotificationsPlugin.initialize(initializationSettings,);
   }
 
-  void _watchCurrentLocation() {
+  void _watchCurrentLocation() { //現在地を調べる
     // 現在地を監視
     positionStream =
         Geolocator.getPositionStream(locationSettings: locationSettings)
@@ -137,6 +134,18 @@ class _MapScreenState extends State<MapScreen> {
           target.longitude,
         ));
         print("------------------------------------------");
+        var d = distanceBetween(
+          // 現在地
+          position.latitude,
+          position.longitude,
+          // 目的地
+          target.latitude,
+          target.longitude,
+        );
+        if (d < 100) {
+          _showNotification();
+        }
+
       });
       // 現在地にカメラを移動
       await mapController.animateCamera(
@@ -150,7 +159,7 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  Future<void> _showNotification() async {
+  Future<void> _showNotification() async { //通知を表示
     var androidChannelSpecifics = AndroidNotificationDetails(
       'CHANNEL_ID',
       'CHANNEL_NAME',
@@ -167,21 +176,22 @@ class _MapScreenState extends State<MapScreen> {
 
     await flutterLocalNotificationsPlugin.show(
       0, // Notification ID
-      'お知らせ', // Notification Title
-      '～について', // Notification Body, set as null to remove the body
+      '位置情報アラームアプリ', // Notification Title
+      '目的地に近づいています。', // Notification Body, set as null to remove the body
       platformChannelSpecifics,
       payload: 'New Payload', // Notification Payload
     );
   }
 
-  Future<void> _requestPermission() async {
+
+  Future<void> _requestPermission() async { //通知の初期化設定
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       await Geolocator.requestPermission();
     }
   }
 
-  Future<void> _moveToCurrentLocation() async {
+  Future<void> _moveToCurrentLocation() async { //マップを現在地に移動
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.always ||
         permission == LocationPermission.whileInUse) {
@@ -212,7 +222,7 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  double distanceBetween(
+  double distanceBetween( //緯度・経度から距離計算
       double latitude1,
       double longitude1,
       double latitude2,
@@ -229,6 +239,4 @@ class _MapScreenState extends State<MapScreen> {
     final double d = 2 * r * asin(sqrt(a + b));
     return d;
   }
-  // 現在地から目的地までの距離が50メートル以内に近づいたら通知を出す。
-
 }
